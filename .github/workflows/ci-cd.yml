@@ -202,6 +202,8 @@ jobs:
           SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
           IMAGE_TAG=${{ needs.BuildAndPushImage.outputs.image_tag }}
           EOF
+      - name: Debug list workspace files
+        run: ls -R /github/workspace
 
       - name: Copy required files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -209,14 +211,16 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           source: |
             /github/workspace/docker-compose.yml
             /github/workspace/.env
-            /github/workspace/nginx/nginx.conf
-            /github/workspace/prometheus/prometheus.yml
-            /github/workspace/prometheus/alert.rules.yml
-            /github/workspace/prometheus/alertmanager.yml
+            /github/workspace/nginx/*
+            /github/workspace/prometheus/*
           target: ${{ env.DEPLOY_DIR }}
+          strip_components: 1
+          overwrite: true
+          debug: true
 
       - name: SSH - Deploy application
         uses: appleboy/ssh-action@v0.1.10
