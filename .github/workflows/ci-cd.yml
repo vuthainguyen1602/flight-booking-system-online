@@ -209,22 +209,27 @@ jobs:
       - name: List repo files for SCP
         run: ls -R .
 
+      - name: Verify files exist
+        run: |
+          echo "=== Workspace contents ==="
+          ls -la
+          echo "=== Docker compose file ==="
+          ls -la docker-compose.yml
+          echo "=== Nginx directory ==="
+          ls -la nginx/
+          echo "=== Prometheus directory ==="
+          ls -la prometheus/
+
       - name: Copy required files to EC2
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          source: |
-            docker-compose.yml
-            .env
-            nginx/
-            prometheus/
+          source: "docker-compose.yml,.env,nginx/,prometheus/"
           target: ${{ env.DEPLOY_DIR }}
-          strip_components: 0
           overwrite: true
-          debug: true
 
       - name: SSH - Deploy application
         uses: appleboy/ssh-action@v0.1.10
