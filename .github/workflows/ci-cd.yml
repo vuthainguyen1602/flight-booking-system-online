@@ -210,12 +210,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: |
-            docker-compose.yml
-            .env
-            nginx/nginx.conf
-            prometheus/prometheus.yml
-            prometheus/alert.rules.yml
-            prometheus/alertmanager.yml
+            /github/workspace/docker-compose.yml
+            /github/workspace/.env
+            /github/workspace/nginx/nginx.conf
+            /github/workspace/prometheus/prometheus.yml
+            /github/workspace/prometheus/alert.rules.yml
+            /github/workspace/prometheus/alertmanager.yml
           target: ${{ env.DEPLOY_DIR }}
 
       - name: SSH - Deploy application
