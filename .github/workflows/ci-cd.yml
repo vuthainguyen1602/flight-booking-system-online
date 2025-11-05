@@ -1,0 +1,325 @@
+name: CI/CD Pipeline - Flight Booking System
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '21'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  APP_DOMAIN: thainv.duckdns.org
+  DEPLOY_DIR: /home/ubuntu/flight-booking-system
+
+jobs:
+  RunUnitTest:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready -U testuser
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: corretto
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run Unit Tests
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: ./gradlew clean test jacocoTestCoverageVerification --no-daemon
+
+  RunIntegrationTest:
+    needs: RunUnitTest
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: integrationdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready -U testuser
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: corretto
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run Integration Tests
+        env:
+          SPRING_PROFILES_ACTIVE: integration
+          DB_HOST: localhost
+          DB_PORT: 5432
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: ./gradlew clean integrationTest --no-daemon
+
+  RunSonarScan:
+    needs: RunIntegrationTest
+    runs-on: ubuntu-latest
+    permissions: read-all
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: corretto
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Cache Sonar and Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.sonar/cache
+            ~/.gradle/caches
+          key: ${{ runner.os }}-ci-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: SonarQube Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew clean jacocoTestReport sonar --no-daemon
+        continue-on-error: true
+
+  BuildAndPushImage:
+    needs: RunSonarScan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: corretto
+
+      - name: Build jar
+        run: chmod +x ./gradlew && ./gradlew bootJar -x test
+
+      - name: Docker metadata
+        id: meta
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          IMAGE_TAG="${BRANCH_NAME}-${SHORT_SHA}"
+          echo "tags=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Building image with tag: $IMAGE_TAG"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || github.actor }}" --password-stdin
+
+      - name: Build & push Docker image
+        run: |
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_TAG=${{ steps.meta.outputs.tags }}
+          
+          # Build with specific tag and latest
+          docker build -t ${IMAGE_BASE}:${IMAGE_TAG} -t ${IMAGE_BASE}:latest .
+          docker push ${IMAGE_BASE}:${IMAGE_TAG}
+          docker push ${IMAGE_BASE}:latest
+
+  Deploy:
+    needs: BuildAndPushImage
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare .env for server
+        run: |
+          cat > .env <<'EOF'
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          GRAFANA_USER=${{ secrets.GRAFANA_USER }}
+          GRAFANA_PASS=${{ secrets.GRAFANA_PASS }}
+          CERTBOT_EMAIL=${{ secrets.CERTBOT_EMAIL }}
+          CERTBOT_DOMAIN=${{ secrets.CERTBOT_DOMAIN }}
+          SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
+          IMAGE_TAG=${{ needs.BuildAndPushImage.outputs.image_tag }}
+          EOF
+
+      - name: Copy required files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: |
+            docker-compose.yml
+            .env
+            nginx/nginx.conf
+            prometheus/prometheus.yml
+            prometheus/alert.rules.yml
+            prometheus/alertmanager.yml
+          target: ${{ env.DEPLOY_DIR }}
+
+      - name: SSH - Deploy application
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ env.DEPLOY_DIR }}
+            
+            # Login to GHCR
+            if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            fi
+            
+            # Store current image for rollback
+            CURRENT_IMAGE=$(docker inspect flight-booking-app --format='{{.Config.Image}}' 2>/dev/null || echo "none")
+            echo "Current image: $CURRENT_IMAGE"
+            
+            # Pull new image
+            docker compose pull
+            
+            # Deploy with zero-downtime
+            docker compose up -d --no-deps --build app
+            
+            # Wait for health check
+            echo "Waiting for application to be healthy..."
+            for i in {1..30}; do
+              if docker inspect flight-booking-app --format='{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
+                echo "Application is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Health check timeout - rolling back"
+                docker tag $CURRENT_IMAGE flight-booking-app:rollback
+                docker compose up -d --no-deps app
+                exit 1
+              fi
+              echo "Attempt $i/30: waiting..."
+              sleep 2
+            done
+            
+            # Renew certificates
+            docker compose run --rm certbot renew || echo "Cert renewal skipped or failed"
+            
+            # Restart supporting services
+            docker compose restart nginx
+            docker restart flight-booking-prometheus 2>/dev/null || true
+            docker restart flight-booking-alertmanager 2>/dev/null || true
+            
+            # Cleanup old images
+            docker image prune -f
+
+      - name: Health check endpoint
+        run: |
+          echo "Performing health check..."
+          sleep 5
+          
+          # Try HTTPS first, fall back to HTTP
+          if curl -fsS --max-time 10 https://${{ env.APP_DOMAIN }}/actuator/health; then
+            echo "HTTPS health check passed"
+          elif curl -fsS --max-time 10 http://${{ secrets.EC2_HOST }}:8080/actuator/health; then
+            echo "HTTP health check passed"
+          else
+            echo "Health check failed!"
+            exit 1
+          fi
+
+      - name: Notify Slack - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": ":white_check_mark: Deployment successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":white_check_mark: *Deployment Successful*\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Environment:* `${{ secrets.EC2_HOST }}`"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": ":x: Deployment failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *Deployment Failed*\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Environment:* `${{ secrets.EC2_HOST }}`\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

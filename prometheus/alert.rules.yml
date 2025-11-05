@@ -1,0 +1,29 @@
+groups:
+  - name: flight-booking-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status!~"2.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate (>10%)"
+          description: "More than 10% of requests are failing."
+
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} > 500000000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High heap memory usage"
+          description: "Heap memory > 500MB for 2m."
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance down"
+          description: "Some monitored instance is down."
