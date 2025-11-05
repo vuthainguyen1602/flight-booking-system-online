@@ -261,6 +261,21 @@ jobs:
             fi
             docker compose version
 
+      - name: Install Loki Docker logging plugin
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            if ! docker plugin ls | grep -q loki; then
+              echo "Installing Loki logging plugin..."
+              sudo docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+            else
+              echo "Loki plugin already installed:"
+              docker plugin ls | grep loki
+            fi
+
       - name: SSH - Deploy application
         uses: appleboy/ssh-action@v0.1.10
         with:
