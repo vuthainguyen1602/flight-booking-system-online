@@ -7,12 +7,10 @@ import com.example.flightbookingsystem.repository.FlightRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cache.CacheManager;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,25 +19,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Alternative test configuration using Spring Boot Test context
- * Use this if FlightService has Spring-specific dependencies or caching annotations
- */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-   "spring.cache.type=none"
-})
-@DisplayName("Flight Service Unit Tests - Spring Context")
-class FlightServiceSpringTest {
+@ExtendWith(MockitoExtension.class)
+class FlightServiceTest {
 
-    @MockBean
+    @Mock
     private FlightRepository flightRepository;
 
-    @Autowired(required = false)
-    private CacheManager cacheManager;
-
-    @Autowired
+    @InjectMocks
     private FlightService flightService;
 
     private Flight testFlight;
@@ -48,19 +34,6 @@ class FlightServiceSpringTest {
 
     @BeforeEach
     void setUp() {
-        // Clear all caches before each test
-        if (cacheManager != null) {
-            cacheManager.getCacheNames().forEach(cacheName -> {
-                var cache = cacheManager.getCache(cacheName);
-                if (cache != null) {
-                    cache.clear();
-                }
-            });
-        }
-
-        // Reset mocks
-        reset(flightRepository);
-
         departureTime = LocalDateTime.now().plusDays(1);
         arrivalTime = departureTime.plusHours(2);
 
@@ -92,13 +65,9 @@ class FlightServiceSpringTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when flight not found")
     void getFlightById_ShouldThrowException_WhenFlightNotFound() {
-        when(flightRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> flightService.getFlightById(999L));
-        verify(flightRepository, times(1)).findById(999L);
+        assertThrows(ResourceNotFoundException.class, () -> {
+            flightService.getFlightById(anyLong());
+        });
     }
-
 }

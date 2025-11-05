@@ -9,9 +9,9 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("integration-test")
 public class FlightBookingSystemApplicationIntegrationTest {
 
-  @Test
-  public void contextLoads() {
-    Assertions.assertTrue(true);
-  }
+    @Test
+    public void contextLoads() {
+        Assertions.assertTrue(true);
+    }
 
 }
