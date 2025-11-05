@@ -202,8 +202,12 @@ jobs:
           SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
           IMAGE_TAG=${{ needs.BuildAndPushImage.outputs.image_tag }}
           EOF
-      - name: Debug list workspace files
-        run: ls -R /github/workspace
+
+      - name: Check repo path
+        run: pwd
+
+      - name: List repo files for SCP
+        run: ls -R .
 
       - name: Copy required files to EC2
         uses: appleboy/scp-action@v0.1.7
