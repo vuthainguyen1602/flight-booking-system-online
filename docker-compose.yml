@@ -29,16 +29,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        loki-batch-size: "400"
-        loki-retries: "2"
-        loki-timeout: "1s"
-        labels: "service=postgres,environment=prod"
-        max-size: "10m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
@@ -65,13 +55,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=redis,environment=prod"
-        max-size: "10m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
@@ -123,13 +106,6 @@ services:
         reservations:
           cpus: '1.0'
           memory: 1G
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=app,environment=prod,component=backend"
-        max-size: "50m"
-        max-file: "5"
     security_opt:
       - no-new-privileges:true
 
@@ -164,13 +140,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=nginx,environment=prod,component=proxy"
-        max-size: "20m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
@@ -187,13 +156,6 @@ services:
     depends_on:
       - nginx
     restart: unless-stopped
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=certbot,environment=prod"
-        max-size: "10m"
-        max-file: "2"
 
   # Loki - Log aggregation
   loki:
@@ -302,13 +264,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=prometheus,environment=prod"
-        max-size: "20m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
@@ -345,13 +300,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=alertmanager,environment=prod"
-        max-size: "10m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
@@ -396,13 +344,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        labels: "service=grafana,environment=prod"
-        max-size: "20m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
 
