@@ -227,6 +227,23 @@ jobs:
           target: ${{ env.DEPLOY_DIR }}
           overwrite: true
 
+      - name: Ensure Docker Compose is installed
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            if ! docker compose version &> /dev/null; then
+              echo "Installing Docker Compose plugin..."
+              DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+              mkdir -p $DOCKER_CONFIG/cli-plugins
+              curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 \
+                -o $DOCKER_CONFIG/cli-plugins/docker-compose
+              chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+            fi
+            docker compose version
+
       - name: SSH - Deploy application
         uses: appleboy/ssh-action@v0.1.10
         with:
