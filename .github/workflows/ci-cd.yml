@@ -282,31 +282,21 @@ jobs:
             # This --wait flag uses the healthcheck from docker-compose.yml
             # and replaces the custom 'for' loop
             echo "Deploying and waiting for application to be healthy..."
-            docker compose up -d --build app --wait
+            docker compose up -d --wait
             
             echo "Application is healthy!"
-            
-            # Restart supporting services
-            docker compose restart nginx
-            docker restart flight-booking-prometheus 2>/dev/null || true
-            docker restart flight-booking-alertmanager 2>/dev/null || true
             
             # Cleanup old images
             docker image prune -f
 
       - name: Health check endpoint
         run: |
-          echo "Performing health check..."
+          echo "Performing health check via ${{ env.APP_DOMAIN }}..."
           sleep 5
           
-          if curl -fsS --max-time 10 https://${{ env.APP_DOMAIN }}/actuator/health; then
-            echo "HTTPS health check passed"
-          elif curl -fsS --max-time 10 http://${{ secrets.EC2_HOST }}:8080/actuator/health; then
-            echo "HTTP health check passed"
-          else
-            echo "Health check failed!"
-            exit 1
-          fi
+          curl -fsS --max-time 20 --retry 3 --retry-delay 5 https://${{ env.APP_DOMAIN }}/actuator/health
+          
+          echo "Health check passed!"
 
       - name: Notify Slack - Success
         if: success()
