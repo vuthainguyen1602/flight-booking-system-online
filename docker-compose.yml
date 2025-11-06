@@ -227,7 +227,6 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     ports:
       - "127.0.0.1:3100:3100"
-      - "127.0.0.1:9095:9095"
     networks:
       - monitoring-network
     healthcheck:
