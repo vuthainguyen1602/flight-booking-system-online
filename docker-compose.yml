@@ -159,6 +159,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: flight-booking-nginx
+    user: "$(id -u):$(id -g)"
     depends_on:
       app:
         condition: service_healthy
@@ -287,7 +288,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: flight-booking-prometheus
-    user: "nobody"
+    user: "$(id -u):$(id -g)"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
@@ -407,7 +408,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: flight-booking-grafana
-    user: "472"
+    user: "$(id -u):$(id -g)"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:?GRAFANA_PASS is required}
