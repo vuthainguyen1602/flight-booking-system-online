@@ -163,7 +163,7 @@ services:
       app:
         condition: service_healthy
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template:ro
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
       - nginx_logs:/var/log/nginx
@@ -172,6 +172,8 @@ services:
       - "443:443"
     networks:
       - frontend-network
+    environment:
+      certbot_domain: ${APP_DOMAIN}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 10s
