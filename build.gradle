@@ -164,7 +164,7 @@ sonar {
         property "sonar.projectKey", "flight-booking-system"
         property "sonar.organization", "vuthainguyen1602"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.login", "da91d71ea9c0d3ecbecf94612e30bb76ae6365b5"
+        property "sonar.token", System.getenv("SONAR_TOKEN")
         property "sonar.gradle.skipCompile", "true"
         property "sonar.qualitygate.wait", "true"
         property "sonar.java.coveragePlugin", "jacoco"
