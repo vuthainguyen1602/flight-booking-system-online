@@ -173,6 +173,7 @@ services:
       - "443:443"
     networks:
       - frontend-network
+      - monitoring-network
     environment:
       CERTBOT_DOMAIN: ${CERTBOT_DOMAIN}
     healthcheck:
