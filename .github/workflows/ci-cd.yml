@@ -213,7 +213,7 @@ jobs:
           script: |
             mkdir -p ${{ env.DEPLOY_DIR }}
             chmod 755 ${{ env.DEPLOY_DIR }}
-            rm -rf ${{ env.DEPLOY_DIR }}/*
+            sudo rm -rf ${{ env.DEPLOY_DIR }}/*
 
       - name: Copy required files to EC2
         uses: appleboy/scp-action@v0.1.7
