@@ -132,7 +132,7 @@ services:
       - frontend-network
       - monitoring-network
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
