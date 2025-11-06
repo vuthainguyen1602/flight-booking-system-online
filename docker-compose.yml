@@ -103,7 +103,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 360s
+      start_period: 3600s
     restart: on-failure
     deploy:
       restart_policy:
