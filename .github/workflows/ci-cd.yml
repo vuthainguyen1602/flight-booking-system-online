@@ -15,7 +15,6 @@ env:
   JAVA_VERSION: '21'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  APP_DOMAIN: thainv.duckdns.org
   DEPLOY_DIR: /home/ec2-user/flight-booking-system
 
 jobs:
@@ -291,10 +290,10 @@ jobs:
 
       - name: Health check endpoint
         run: |
-          echo "Performing health check via ${{ env.APP_DOMAIN }}..."
+          echo "Performing health check via ${{ secrets.CERTBOT_DOMAIN }}..."
           sleep 5
           
-          curl -fsS --max-time 20 --retry 3 --retry-delay 5 https://${{ env.APP_DOMAIN }}/actuator/health
+          curl -fsS --max-time 20 --retry 3 --retry-delay 5 https://${{ secrets.CERTBOT_DOMAIN }}/actuator/health
           
           echo "Health check passed!"
 
