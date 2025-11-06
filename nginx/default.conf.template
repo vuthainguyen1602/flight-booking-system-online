@@ -2,6 +2,11 @@ server {
     listen 80;
     server_name ${CERTBOT_DOMAIN};
 
+    location /health {
+        return 200 "healthy";
+        add_header Content-Type text/plain;
+    }
+
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
@@ -18,6 +23,11 @@ server {
     ssl_certificate /etc/letsencrypt/live/${CERTBOT_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${CERTBOT_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
+
+    location /health {
+        return 200 "healthy";
+        add_header Content-Type text/plain;
+    }
 
     location / {
         proxy_pass http://app:8080;

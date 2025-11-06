@@ -284,6 +284,11 @@ jobs:
             docker compose up -d --wait
             
             echo "Application is healthy!"
+            # Restart related services
+            echo "Restarting supporting services..."
+            docker compose restart nginx || true
+            docker compose restart prometheus || true
+            docker compose restart grafana || true
             
             # Cleanup old images
             docker image prune -f
