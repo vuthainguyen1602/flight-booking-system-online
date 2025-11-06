@@ -101,6 +101,7 @@ services:
     image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-flight-booking-system}:${IMAGE_TAG:-latest}
     container_name: flight-booking-app
     environment:
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: DEBUG
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-flightdb}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-flightuser}
