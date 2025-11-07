@@ -302,7 +302,7 @@ jobs:
           echo "Performing health check via ${{ secrets.CERTBOT_DOMAIN }}..."
           sleep 5
           
-          curl -fsS --max-time 20 --retry 3 --retry-delay 5 https://${{ secrets.CERTBOT_DOMAIN }}/actuator/health
+          curl -fsS --max-time 20 --retry 3 --retry-delay 5 https://${{ secrets.CERTBOT_DOMAIN }}/health
           
           echo "Health check passed!"
 
