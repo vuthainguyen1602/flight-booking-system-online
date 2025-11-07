@@ -16,7 +16,6 @@ server {
         add_header Content-Type text/plain;
     }
 
-    # Spring Boot App
     location / {
         # 2. Set the upstream as a variable
         set $spring_upstream "http://flight-booking-app:8080/";
@@ -31,7 +30,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Grafana
     location /grafana/ {
         # Apply the same fix
         set $grafana_upstream "http://flight-booking-grafana:3000";
