@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Flight Booking System
+name: CI/CD Pipeline - Flight Booking System New
 
 on:
   push:
