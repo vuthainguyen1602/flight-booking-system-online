@@ -1,4 +1,24 @@
 server {
+    listen 80;
+    server_name ${CERTBOT_DOMAIN};
+
+    # Healthcheck HTTP
+    location /health {
+        return 200 "healthy";
+        add_header Content-Type text/plain;
+    }
+
+    # Certbot ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
     listen 443 ssl;
     server_name ${CERTBOT_DOMAIN};
 
@@ -6,22 +26,15 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/${CERTBOT_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
-    # 1. ADD DOCKER'S INTERNAL DNS RESOLVER
-    # This tells Nginx to query Docker's DNS at runtime.
     resolver 127.0.0.11 valid=30s;
 
-    # Healthcheck HTTPS
     location /health {
         return 200 "healthy";
         add_header Content-Type text/plain;
     }
 
     location / {
-        # 2. Set the upstream as a variable
         set $spring_upstream "http://flight-booking-app:8080/";
-
-        # 3. Use the variable in proxy_pass
-        # This forces Nginx to use the resolver and find the host at runtime.
         proxy_pass $spring_upstream;
 
         proxy_set_header Host $host;
@@ -31,9 +44,18 @@ server {
     }
 
     location /grafana/ {
-        # Apply the same fix
         set $grafana_upstream "http://flight-booking-grafana:3000";
         proxy_pass $grafana_upstream;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /loki/ {
+        set $loki_upstream "http://flight-booking-loki:3100";
+        proxy_pass $loki_upstream;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
