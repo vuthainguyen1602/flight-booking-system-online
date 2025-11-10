@@ -34,7 +34,7 @@ server {
     }
 
     location / {
-        set $spring_upstream "http://flight-booking-app:8080/";
+        set $spring_upstream "http://flight-booking-app:8080";
         proxy_pass $spring_upstream;
 
         proxy_set_header Host $host;
