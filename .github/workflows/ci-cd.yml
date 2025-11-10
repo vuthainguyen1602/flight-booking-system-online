@@ -185,6 +185,7 @@ jobs:
           else
             echo "SONAR_TOKEN has been successfully loaded."
           fi
+          ./gradlew classes testClasses integrationTestClasses --no-daemon
           ./gradlew sonar --no-daemon -Dsonar.token=$SONAR_TOKEN
 
   SecurityScan:
