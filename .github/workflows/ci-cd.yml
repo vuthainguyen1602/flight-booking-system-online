@@ -186,7 +186,6 @@ jobs:
             echo "SONAR_TOKEN has been successfully loaded."
           fi
           ./gradlew sonar --no-daemon -Dsonar.token=$SONAR_TOKEN
-        continue-on-error: true
 
   SecurityScan:
     runs-on: ubuntu-latest
